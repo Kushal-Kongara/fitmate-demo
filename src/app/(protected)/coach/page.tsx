@@ -1,6 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 type Latest = {
   id: string;
   meal_id: string;

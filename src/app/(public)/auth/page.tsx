@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { sb } from '@/lib/supabase';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState('');

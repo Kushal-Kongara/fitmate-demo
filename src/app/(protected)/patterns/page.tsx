@@ -2,6 +2,9 @@
 import { useEffect, useState } from 'react';
 import { sb } from '@/lib/supabase';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export default function Patterns() {
   const [uid, setUid] = useState('');
   const [loading, setLoading] = useState(false);

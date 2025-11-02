@@ -2,6 +2,9 @@
 import { useEffect, useState } from 'react';
 import { sb } from '@/lib/supabase';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export default function MealPage() {
   const [text, setText] = useState('');
   const [ai, setAi] = useState('');

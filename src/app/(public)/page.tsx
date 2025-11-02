@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { sb } from '@/lib/supabase';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
   useEffect(() => {

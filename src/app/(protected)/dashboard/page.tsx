@@ -1,7 +1,10 @@
 'use client';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export default function Dashboard() {
-  return (
+    return (
     <>
       {/* Welcome Hero */}
       <section style={{
@@ -506,5 +509,6 @@ export default function Dashboard() {
         </div>
       </section>
     </>
-  );
-}
+    );
+  }
+  
