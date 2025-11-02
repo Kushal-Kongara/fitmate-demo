@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
-);
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE!
+  );
+}
 
 // (optional) keep this if you added it for debugging; also unwrap params
 export async function GET(_: NextRequest, context: { params: Promise<{ mealId: string }> }) {
@@ -14,6 +19,7 @@ export async function GET(_: NextRequest, context: { params: Promise<{ mealId: s
 
 export async function POST(_: NextRequest, context: { params: Promise<{ mealId: string }> }) {
   const { mealId } = await context.params; // ✅ unwrap the Promise
+  const admin = getSupabaseAdmin();
 
   const { data: fbRow, error: fbErr } = await admin
     .from('feedback')

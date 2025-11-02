@@ -2,14 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
 
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!  // server-side key
-);
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+}
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE!  // server-side key
+  );
+}
 
 export async function POST(req: NextRequest) {
+  const openai = getOpenAI();
+  const admin = getSupabaseAdmin();
   try {
     const { user_id, text_entry, image_url } = await req.json();
 

@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!
-);
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE!
+  );
+}
 
 export async function GET() {
+  const admin = getSupabaseAdmin();
   // Try order by created_at (now exists). If someone copied older schema, we still fallback by id.
   const { data, error } = await admin
     .from('feedback')
