@@ -1,24 +1,90 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { sb } from '@/lib/supabase';
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const router = useRouter();
-  const params = useSearchParams();
   const pathname = usePathname();
-  const next = params.get('next') || '/dashboard';
 
   useEffect(() => {
     let mounted = true;
+    let hasRedirected = false;
+    
+    console.log('[ProtectedLayout] Starting auth check...');
+    console.log('[ProtectedLayout] Current URL:', window.location.href);
+    console.log('[ProtectedLayout] Pathname:', pathname);
+    
+    // Check if URL contains auth tokens (from magic link)
+    if (typeof window !== 'undefined') {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const searchParams = new URLSearchParams(window.location.search);
+      const hasAuthTokens = hashParams.has('access_token') || searchParams.has('code');
+      
+      console.log('[ProtectedLayout] Hash params:', window.location.hash);
+      console.log('[ProtectedLayout] Search params:', window.location.search);
+      console.log('[ProtectedLayout] Has auth tokens?', hasAuthTokens);
+      
+      // If auth tokens present, give Supabase time to process them
+      if (hasAuthTokens) {
+        console.log('[ProtectedLayout] Auth tokens detected! Waiting for Supabase to process...');
+        // Wait a bit for Supabase to process the tokens
+        setTimeout(() => {
+          if (!mounted) return;
+          console.log('[ProtectedLayout] Checking session after token processing...');
+          sb.auth.getSession().then(({ data }) => {
+            if (!mounted) return;
+            console.log('[ProtectedLayout] Session after processing:', data.session ? 'EXISTS' : 'NULL');
+            if (data.session) {
+              console.log('[ProtectedLayout] ✅ Session found! User authenticated:', data.session.user.email);
+              setReady(true);
+            } else if (!hasRedirected) {
+              console.log('[ProtectedLayout] ❌ No session after token processing, redirecting to auth');
+              hasRedirected = true;
+              router.replace(`/auth?next=${encodeURIComponent(pathname)}`);
+            }
+          });
+        }, 1500);
+        return;
+      }
+    }
+    
+    // Normal authentication check (no magic link tokens)
+    console.log('[ProtectedLayout] No auth tokens in URL, checking existing session...');
     sb.auth.getSession().then(({ data }) => {
       if (!mounted) return;
-      if (!data.session) router.replace(`/auth?next=${encodeURIComponent(next)}`);
-      else setReady(true);
+      console.log('[ProtectedLayout] Existing session:', data.session ? 'EXISTS' : 'NULL');
+      if (!data.session && !hasRedirected) {
+        console.log('[ProtectedLayout] No session, redirecting to auth');
+        hasRedirected = true;
+        router.replace(`/auth?next=${encodeURIComponent(pathname)}`);
+      } else if (data.session) {
+        console.log('[ProtectedLayout] ✅ Session found! User:', data.session.user.email);
+        setReady(true);
+      }
     });
-    return () => { mounted = false; };
-  }, [router, next]);
+
+    // Listen for auth state changes (important for magic link flow)
+    const { data: authListener } = sb.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      console.log('[ProtectedLayout] Auth state changed:', event, session ? 'Session exists' : 'No session');
+      
+      if (event === 'SIGNED_IN' && session) {
+        console.log('[ProtectedLayout] ✅ SIGNED_IN event! User:', session.user.email);
+        setReady(true);
+      } else if (event === 'SIGNED_OUT' && !hasRedirected) {
+        console.log('[ProtectedLayout] SIGNED_OUT event, redirecting to auth');
+        hasRedirected = true;
+        router.replace('/auth');
+      }
+    });
+
+    return () => { 
+      mounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, [router, pathname]);
 
   async function logout() {
     await sb.auth.signOut();

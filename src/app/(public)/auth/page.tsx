@@ -15,13 +15,26 @@ export default function AuthPage() {
   // If already logged in, go straight to next
   useEffect(() => {
     let mounted = true;
+    console.log('[AuthPage] Checking for existing session...');
+    console.log('[AuthPage] Current URL:', window.location.href);
+    console.log('[AuthPage] Next redirect:', next);
+    
     sb.auth.getSession().then(({ data }) => {
       if (!mounted) return;
-      if (data.session) router.replace(next);
+      console.log('[AuthPage] Existing session:', data.session ? 'EXISTS' : 'NULL');
+      if (data.session) {
+        console.log('[AuthPage] ✅ Already logged in, redirecting to:', next);
+        router.replace(next);
+      }
     });
+    
     // Also listen for state changes in case Supabase sets session after redirect
-    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => {
-      if (session) router.replace(next);
+    const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
+      console.log('[AuthPage] Auth state change:', event, session ? 'Session exists' : 'No session');
+      if (session && event === 'SIGNED_IN') {
+        console.log('[AuthPage] ✅ SIGNED_IN event! Redirecting to:', next);
+        router.replace(next);
+      }
     });
     return () => { mounted = false; sub.subscription.unsubscribe(); };
   }, [router, next]);
@@ -35,16 +48,23 @@ export default function AuthPage() {
     setSending(true);
     setMsg('');
     
+    const redirectTo = typeof window !== 'undefined' 
+      ? `${window.location.origin}${next}` 
+      : undefined;
+    
+    console.log('[AuthPage] Sending magic link...');
+    console.log('[AuthPage] Email:', email);
+    console.log('[AuthPage] Redirect URL:', redirectTo);
+    
     try {
       const { error } = await sb.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo:
-            typeof window !== 'undefined'
-              ? window.location.origin + next
-              : undefined,
+          emailRedirectTo: redirectTo,
         },
       });
+      
+      console.log('[AuthPage] Magic link response:', error ? `ERROR: ${error.message}` : 'SUCCESS');
       setMsg(error ? error.message : '✅ Check your email for the magic link!');
     } catch (error) {
       setMsg('Failed to send magic link. Please try again.');
